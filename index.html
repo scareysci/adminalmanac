@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Administrative Calendar</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+        }
+        .task-card {
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .task-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        .month-nav-button.active {
+            background-color: #4f46e5;
+            color: white;
+        }
+        .filter-button.active {
+            opacity: 1;
+            transform: scale(1.05);
+        }
+        .filter-button {
+             opacity: 0.7;
+             transition: all 0.2s ease;
+        }
+        .task-card.completed { opacity: 0.85; }
+        .task-card.completed .task-text { text-decoration: line-through; color: #555; }
+
+        /* Darker shades for completed tasks */
+        .task-card[data-category="Education Plan/School Learning Improvement Plan"].completed { background-color: #d8b4fe; }
+        .task-card[data-category="School Level"].completed { background-color: #93c5fd; }
+        .task-card[data-category="Division Office"].completed { background-color: #86efac; }
+        .task-card[data-category="Business"].completed { background-color: #fcd34d; }
+        .task-card[data-category="Student Support Services"].completed { background-color: #fca5a5; }
+        .task-card[data-category="School Superintendent"].completed { background-color: #a5b4fc; }
+        .task-card[data-category="Curriculum/Instruction/Assessment"].completed { background-color: #f9a8d4; }
+        .task-card[data-category="Human Resources"].completed { background-color: #99f6e4; }
+        .task-card[data-category="Facilities/IT/Transportation"].completed { background-color: #d1d5db; }
+
+        .task-checkbox {
+            appearance: none;
+            width: 1.25rem;
+            height: 1.25rem;
+            border: 2px solid #9ca3af;
+            border-radius: 0.25rem;
+            display: inline-block;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s, border-color 0.2s;
+            flex-shrink: 0;
+        }
+        .task-checkbox:checked {
+            background-color: #4f46e5;
+            border-color: #4f46e5;
+        }
+        .task-checkbox:checked::after {
+            content: '';
+            position: absolute;
+            left: 5px;
+            top: 1px;
+            width: 5px;
+            height: 10px;
+            border: solid white;
+            border-width: 0 3px 3px 0;
+            transform: rotate(45deg);
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 tracking-tight">School Administrative Almanac</h1>
+            <p class="text-lg text-gray-500 mt-2">An interactive guide to the 2024-25 school year activities and due dates.</p>
+        </header>
+
+        <!-- Month Navigation -->
+        <div id="month-navigation" class="flex flex-wrap justify-center gap-2 mb-8 sticky top-4 bg-white/80 backdrop-blur-sm p-4 rounded-full shadow-md z-10">
+            <!-- Month buttons will be inserted here by JavaScript -->
+        </div>
+
+        <!-- Filters and Search -->
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div id="category-filters" class="flex flex-wrap justify-center gap-2">
+                <!-- Filter buttons will be inserted here -->
+            </div>
+            <div class="relative w-full md:w-auto">
+                <input type="text" id="search-input" placeholder="Search tasks..." class="pl-10 pr-4 py-2 border rounded-full w-full md:w-64 focus:ring-2 focus:ring-indigo-500 focus:outline-none transition">
+                 <svg class="w-5 h-5 text-gray-400 absolute left-3 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            </div>
+        </div>
+
+        <!-- Calendar Content -->
+        <div id="calendar-content">
+            <!-- Calendar sections for each month will be inserted here -->
+        </div>
+         <div id="no-results" class="text-center py-16 hidden">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path vector-effect="non-scaling-stroke" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V7a2 2 0 012-2h10a2 2 0 012 2v10a2 2 0 01-2 2H4a2 2 0 01-2-2z" />
+            </svg>
+            <h3 class="mt-2 text-sm font-semibold text-gray-900">No tasks found</h3>
+            <p class="mt-1 text-sm text-gray-500">Try adjusting your search or filters.</p>
+          </div>
+    </div>
+
+    <script>
+        const calendarData = {
+            "August": {
+                "Education Plan/School Learning Improvement Plan": [],
+                "School Level": [
+                    { "id": "August-School Level-0", "task": "Submit requests for cooperative or coed SHSAA teams to the Division Office.", "dueDate": "Prior to October 1", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "August-School Level-1", "task": "Communicate school fee structure, which has been reviewed by your SCC to students and parents; issue receipts for fees received.", "dueDate": "August", "contact": "Kim Fick, School Superintendent" },
+                    { "id": "August-School Level-2", "task": "Update 'beginning of the year' forms for all students and update student lists for staff information.", "dueDate": "August", "contact": "Task completed at the school level" },
+                    { "id": "August-School Level-3", "task": "Meet with Athletic Director to review the year ahead and share/review the Athletic Directors and Coaches' Handbook.", "dueDate": "August", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "August-School Level-4", "task": "Update staff contact list Information.", "dueDate": "August", "contact": "Task completed at the school level" },
+                    { "id": "August-School Level-5", "task": "Contact SCC Chair to begin a conversation about upcoming year and invite all members to SLIP planning day.", "dueDate": "August", "contact": "Kim Fick, School Superintendent" },
+                    { "id": "August-School Level-6", "task": "Confirm all Sask DLC course registrations have been submitted and a supervision of student plan is in place.", "dueDate": "August", "contact": "Blain Hilbig, Superintendent of Schools" },
+                    { "id": "August-School Level-7", "task": "Distribute Violent Threat Risk Assessment (VTRA) Fair Notice to Parents.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" }
+                ],
+                "Division Office": [
+                    { "id": "August-Division Office-0", "task": "Request Student Information System (SDS) username and password for new office staff and student support teachers.", "dueDate": "August", "contact": "Sheri Gallaugher" },
+                    { "id": "August-Division Office-1", "task": "Request MySchoolSask/Edsby username and password for new office staff and student support teachers.", "dueDate": "August", "contact": "Sondra Potratz" },
+                    { "id": "August-Division Office-2", "task": "Review Grade 10-12 student marks on SDS as posted for June 30 and make corrections.", "dueDate": "August", "contact": "Sondra Potratz" },
+                    { "id": "August-Division Office-3", "task": "Review and revise MySchoolSask/Edsby data and school level information.", "dueDate": "August", "contact": "Sondra Potratz/Sheri Gallaugher" },
+                    { "id": "August-Division Office-4", "task": "Review dates for report cards and establish criteria/expectations for parent portal/digital portfolio use.", "dueDate": "August", "contact": "Sondra Potratz" },
+                    { "id": "August-Division Office-5", "task": "Review school website and plan for updates and changes.", "dueDate": "August", "contact": "Mike Fedyk" },
+                    { "id": "August-Division Office-6", "task": "Keep MySchoolSask/Edsby student enrollment data current.", "dueDate": "August", "contact": "Sondra Potratz" },
+                    { "id": "August-Division Office-7", "task": "Review and update Driver Education list of students.", "dueDate": "August", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "August-Business-0", "task": "Review decentralized budget.", "dueDate": "August", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "August-Business-1", "task": "Complete annual accounting of school level funds and fees.", "dueDate": "August", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "August-Business-2", "task": "Submit GST rebate for major purchases.", "dueDate": "August", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "August-Business-3", "task": "Review rental agreements for user groups.", "dueDate": "August", "contact": "Ryan Smith, Superintendent of Business" },
+                    { "id": "August-Business-4", "task": "Review insurance coverage and submit incident reports as needed.", "dueDate": "Ongoing", "contact": "Ryan Smith, Superintendent of Business" }
+                ],
+                "Student Support Services": [
+                    { "id": "August-Student Support Services-0", "task": "Review lockdown plan and plan drills for the upcoming school year. Finalize evacuation plans for students with special needs.", "dueDate": "Prior to September 15th", "contact": "Operational Superintendent" },
+                    { "id": "August-Student Support Services-1", "task": "Communicate/review lockdown procedures with local RCMP.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" },
+                    { "id": "August-Student Support Services-2", "task": "Refer/communicate with Director/designate if International Students are registering.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" },
+                    { "id": "August-Student Support Services-3", "task": "Add time on opening staff meeting agenda for discussion of Student Support Services protocols/procedures.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" },
+                    { "id": "August-Student Support Services-4", "task": "Review Communicable Disease Control Handbook.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" },
+                    { "id": "August-Student Support Services-5", "task": "Review educational assistant assignments and arrange space for itinerant individuals.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" },
+                    { "id": "August-Student Support Services-6", "task": "Review Form 210-23 to understand/schedule Student Support Services caseload.", "dueDate": "August", "contact": "Meaghan Friedrick, Superintendent of Student Support Services" }
+                ],
+                "School Superintendent": [
+                    { "id": "August-School Superintendent-0", "task": "Orientation of all new staff to Division, school and job assignments.", "dueDate": "August", "contact": "School Superintendent and/or Division Office Managers" },
+                    { "id": "August-School Superintendent-1", "task": "Review Division Administrative Procedures.", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-2", "task": "Ensure school teams are in place (Leadership, PLC, Crisis Response, etc.).", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-3", "task": "Schedule time for school wide initiatives (DEAR, inMotion, WIN Time).", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-4", "task": "Schedule Parent Information Evening.", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-5", "task": "Review AP 414 for accessing support from Division Level.", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-6", "task": "Review performance appraisal processes for all staff.", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-7", "task": "Review professional growth plans process with staff.", "dueDate": "August", "contact": "School Superintendent" },
+                    { "id": "August-School Superintendent-8", "task": "Review start time, breaks, recesses, lunch hour, and dismissal times with staff.", "dueDate": "August", "contact": "School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                     { "id": "August-Curriculum/Instruction/Assessment-0", "task": "Review Assessment and Communication Matrix.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" },
+                     { "id": "August-Curriculum/Instruction/Assessment-1", "task": "Begin School Learning Improvement Plan with staff and SCC.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" },
+                     { "id": "August-Curriculum/Instruction/Assessment-2", "task": "Review SOCAN, ACF, and VEC/Criterion Copyright agreements.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" },
+                     { "id": "August-Curriculum/Instruction/Assessment-3", "task": "Review Sun West Assessment Schedule with teachers and plan for implementation.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" },
+                     { "id": "August-Curriculum/Instruction/Assessment-4", "task": "Review Sun West School Division Technology Handbook.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" },
+                     { "id": "August-Curriculum/Instruction/Assessment-5", "task": "Complete Technology Related Administrative Procedures and Forms.", "dueDate": "August", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Human Resources": [
+                    { "id": "August-Human Resources-0", "task": "Ensure all teachers (including substitutes) are registered with SPTRB.", "dueDate": "August 30", "contact": "Lauren Johb or Janine Walker" },
+                    { "id": "August-Human Resources-1", "task": "Confirm schedules in Absence Management (Aesop) for all Support Staff.", "dueDate": "August 30", "contact": "Janine Walker" },
+                    { "id": "August-Human Resources-2", "task": "Ensure there is a CUPE section on a bulletin board in Staff room.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-3", "task": "Inform staff about reporting workplace injuries and right to refuse dangerous work.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-4", "task": "Ensure Staff are informed of all risks based on their roles.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-5", "task": "Inform all Staff about ComPsych Guidance Resources.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-6", "task": "Inform Staff about Not Myself Today and invite them to create an account.", "dueDate": "August 30", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-7", "task": "Review staff certification in CPR/1st Aid and Food Safe.", "dueDate": "August", "contact": "Donna Adair" },
+                    { "id": "August-Human Resources-8", "task": "Review employee/volunteer privacy, confidentiality and responsible use of technology with all staff.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-9", "task": "Track Noon Hour Supervision and Extra-curricular hours.", "dueDate": "August", "contact": "Donna Adair" },
+                    { "id": "August-Human Resources-10", "task": "Review procedure for accessing leaves (all staff).", "dueDate": "August", "contact": "Lauren Johb/Janine Walker" },
+                    { "id": "August-Human Resources-11", "task": "Run Active Accreditation Report and ensure teacher accreditation is up to date.", "dueDate": "August", "contact": "Lauren Johb" },
+                    { "id": "August-Human Resources-12", "task": "Ensure AP 432 is posted in accordance with OHS Act.", "dueDate": "August", "contact": "Lauren Johb" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "August-Facilities/IT/Transportation-0", "task": "Request for Student Transportation.", "dueDate": "August (prior to school start)", "contact": "Transportation Department" },
+                    { "id": "August-Facilities/IT/Transportation-1", "task": "Request Student Bus Transportation for PAA students.", "dueDate": "August", "contact": "Transportation Department" },
+                    { "id": "August-Facilities/IT/Transportation-2", "task": "Contact Facilities for ventilation needs outside of regular school hours.", "dueDate": "August", "contact": "Facilities/AssetPlanner" },
+                    { "id": "August-Facilities/IT/Transportation-3", "task": "Meet with school caretaker(s) and complete walkthrough.", "dueDate": "August", "contact": "Facilities Department" },
+                    { "id": "August-Facilities/IT/Transportation-4", "task": "Develop/review procedures for safe lab operation, update WHMIS, and check first aid materials.", "dueDate": "August", "contact": "Facilities Department" },
+                    { "id": "August-Facilities/IT/Transportation-5", "task": "Review fire drill and evacuation plan. Plan drills (3 fall/3 spring).", "dueDate": "August", "contact": "Facilities Department" },
+                    { "id": "August-Facilities/IT/Transportation-6", "task": "Review AED procedures if applicable.", "dueDate": "August", "contact": "Facilities Department" },
+                    { "id": "August-Facilities/IT/Transportation-7", "task": "Establish OH&S committee and schedule next meeting.", "dueDate": "August", "contact": "Facilities Department" }
+                ]
+            },
+            "September": {
+                 "Education Plan/School Learning Improvement Plan": [
+                    { "id": "September-Education Plan/School Learning Improvement Plan-0", "task": "Learning Improvement - School Mission and Vision.", "dueDate": "Prior to September 30", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Education Plan/School Learning Improvement Plan-1", "task": "Continue building School Learning Improvement Plan.", "dueDate": "Prior to September 30", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Education Plan/School Learning Improvement Plan-2", "task": "School Learning Improvement Action Plan (Updated as necessary).", "dueDate": "Prior to September 30", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Education Plan/School Learning Improvement Plan-3", "task": "School Improvement Action Plan Reflection (September PD Day).", "dueDate": "September", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Education Plan/School Learning Improvement Plan-4", "task": "School Learning Improvement Plan - Displayed in School.", "dueDate": "Ongoing", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "School Level": [
+                    { "id": "September-School Level-0", "task": "SHSAA School Team Registration Form Completed by School Athletic Director.", "dueDate": "September 12, 2023", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "September-School Level-1", "task": "Eligibility Forms for Cross Country, Volleyball, Soccer, Football and Golf Completed.", "dueDate": "Sept 13 (Golf), Sept 20 (Others)", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "September-School Level-2", "task": "SHSAA Officials Registry for Fall Sports Completed.", "dueDate": "September 16", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "September-School Level-3", "task": "SHSAA School Enrollment Declaration Form Completed.", "dueDate": "By Oct. 2, 2023", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "September-School Level-4", "task": "Athletic Director submit West Central Junior School Team Registration Form.", "dueDate": "September 30", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "September-School Level-5", "task": "Set the SCC Annual Meeting date for no later than April 30th.", "dueDate": "September", "contact": "Kim Fick, School Superintendent" },
+                    { "id": "September-School Level-6", "task": "Request community coach approval to Superintendent.", "dueDate": "September", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "September-Business-0", "task": "School Generated Funds Bank Reconciliation (for June, July, August).", "dueDate": "September 10", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "September-Business-1", "task": "SCC Annual Financial Workbook with Bank Statements ending August 31.", "dueDate": "Prior to September 30", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "September-Business-2", "task": "Review Fundraising Activities with SCC.", "dueDate": "Prior to September 30", "contact": "Ryan Smith/Jamie Cowell" },
+                    { "id": "September-Business-3", "task": "School Incident Report Form, completed throughout the year.", "dueDate": "September 30", "contact": "Ryan Smith, Superintendent of Business" }
+                ],
+                "Student Support Services": [
+                    { "id": "September-Student Support Services-0", "task": "Support prekindergarten teacher in conducting Ages and Stages Questionnaire.", "dueDate": "September", "contact": "Chris Oscar, Superintendent of Schools" },
+                    { "id": "September-Student Support Services-1", "task": "Inform parents about school nutrition procedures.", "dueDate": "September", "contact": "Meaghan Friedrick" },
+                    { "id": "September-Student Support Services-2", "task": "Review student registrations in Modified (11, 21, 31), and Alternative (18, 28, 38) courses.", "dueDate": "September", "contact": "Meaghan Friedrick" },
+                    { "id": "September-Student Support Services-3", "task": "Update student medication forms annually.", "dueDate": "September", "contact": "Meaghan Friedrick" },
+                    { "id": "September-Student Support Services-4", "task": "Deadline for entering English as an Additional Language (EAL) CFR numbers.", "dueDate": "September", "contact": "Meaghan Friedrick" },
+                    { "id": "September-Student Support Services-5", "task": "Grade 1 Phonological Awareness Screen for Reading Intervention.", "dueDate": "September", "contact": "Meaghan Friedrick" },
+                    { "id": "September-Student Support Services-6", "task": "Review and update any Behaviour, Safety, or other Student Specific plans.", "dueDate": "September", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "September-School Superintendent-0", "task": "Complete School-Based Administrators Self-Reflection document.", "dueDate": "September 27", "contact": "School Superintendent" },
+                    { "id": "September-School Superintendent-1", "task": "Submit Principals' Month End Report.", "dueDate": "Prior to September 30", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "September-School Superintendent-2", "task": "Establish format of parent/student/teacher conferences/interviews.", "dueDate": "Prior to September 30", "contact": "School Superintendent" },
+                    { "id": "September-School Superintendent-3", "task": "Set School Graduation Date.", "dueDate": "Prior to September 30", "contact": "Sheri Gallaugher" },
+                    { "id": "September-School Superintendent-4", "task": "In collaboration with SCC, staff, students and parents create/review Code of Conduct.", "dueDate": "September", "contact": "School Superintendent" },
+                    { "id": "September-School Superintendent-5", "task": "Revisit expectations for Supervision and Appraisal.", "dueDate": "September", "contact": "School Superintendent" },
+                    { "id": "September-School Superintendent-6", "task": "Submit Finalized School Program Plan.", "dueDate": "September 30", "contact": "School Superintendent" }
+                ],
+                 "Curriculum/Instruction/Assessment": [
+                    { "id": "September-Curriculum/Instruction/Assessment-0", "task": "Complete benchmark assessments and begin creation of Personalized Goals.", "dueDate": "September", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Curriculum/Instruction/Assessment-1", "task": "Upload Form 110-2a School Learning Improvement Plan when complete.", "dueDate": "September", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "September-Curriculum/Instruction/Assessment-2", "task": "Support CWEX teacher in meeting the needs of students.", "dueDate": "September", "contact": "Chris Oscar, Superintendent of Schools" },
+                    { "id": "September-Curriculum/Instruction/Assessment-3", "task": "Ensure SCC are planning for Engagement and Alignment Plan.", "dueDate": "September", "contact": "Kim Fick, Superintendent of Schools" }
+                ],
+                "Human Resources": [
+                    { "id": "September-Human Resources-0", "task": "Submit - Noon Supervision Schedule.", "dueDate": "September 13", "contact": "Donna Adair, Employee Benefits Officer" },
+                    { "id": "September-Human Resources-1", "task": "Submit Extra-Curricular Hours.", "dueDate": "Ongoing", "contact": "Donna Adair, Employee Benefits Officer" },
+                    { "id": "September-Human Resources-2", "task": "Run Active Accreditation report.", "dueDate": "Ongoing", "contact": "Lauren Johb, Human Resources Manager" },
+                    { "id": "September-Human Resources-3", "task": "Review the Support Staff Professional Development Fund with Support Staff.", "dueDate": "September", "contact": "Lauren Johb, Human Resources Manager" },
+                    { "id": "September-Human Resources-4", "task": "Review Lone Worker procedure with appropriate staff.", "dueDate": "September", "contact": "Lauren Johb, Human Resources Manager" },
+                    { "id": "September-Human Resources-5", "task": "Ensure volunteer package is available and presented to new volunteers.", "dueDate": "September", "contact": "Lauren Johb, Human Resources Manager" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "September-Facilities/IT/Transportation-0", "task": "Review Responsible Use of Technology with students.", "dueDate": "September", "contact": "Kim Price, Superintendent of IT" },
+                    { "id": "September-Facilities/IT/Transportation-1", "task": "Ensure School Code of Conduct is posted on each school bus.", "dueDate": "September", "contact": "Transportation Department" },
+                    { "id": "September-Facilities/IT/Transportation-2", "task": "Submit Driver Authorizations for anyone transporting students.", "dueDate": "September", "contact": "Ryan Smith, Superintendent of Business" },
+                    { "id": "September-Facilities/IT/Transportation-3", "task": "Request Educational Trips Transportation (one week prior).", "dueDate": "Ongoing", "contact": "Transportation Department" }
+                ]
+            },
+            "October": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "October-Education Plan/School Learning Improvement Plan-0", "task": "Upload Final Draft of School Learning Improvement Plan.", "dueDate": "October 15", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "October-Education Plan/School Learning Improvement Plan-1", "task": "School Improvement Action Plan Reflection (October PD Day).", "dueDate": "October", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Division Office": [
+                    { "id": "October-Division Office-0", "task": "Deadline for 1st Semester course registration MySchoolSask.", "dueDate": "October 27, 2023", "contact": "Sondra Potratz" },
+                    { "id": "October-Division Office-1", "task": "Review OurSCHOOL Survey administration.", "dueDate": "October", "contact": "Chris Oscar, School Superintendent" },
+                    { "id": "October-Division Office-2", "task": "OurSCHOOL Survey Set Up.", "dueDate": "October", "contact": "Chris Oscar, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "October-Business-0", "task": "Budget Information for current school year will be sent.", "dueDate": "Week of October 9", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "October-Business-1", "task": "Review decentralized school budget.", "dueDate": "October", "contact": "Jamie Cowell, Business Manager" }
+                ],
+                "Student Support Services": [
+                    { "id": "October-Student Support Services-0", "task": "Consult with Student Support Teacher and ensure IIPs are signed and distributed.", "dueDate": "October 15", "contact": "Meaghan Friedrick" },
+                    { "id": "October-Student Support Services-1", "task": "Early Years Evaluation (EYE) data entry start date.", "dueDate": "October 15, 2024", "contact": "Chris Oscar, Superintendent of Schools" },
+                    { "id": "October-Student Support Services-2", "task": "Update Form 210-23 Add/Remove Students and needs at School.", "dueDate": "October 15, 2024", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "October-School Superintendent-0", "task": "Ensure Professional Growth goal is ready for dialogue with Superintendent.", "dueDate": "October 3", "contact": "School Superintendent" },
+                    { "id": "October-School Superintendent-1", "task": "Completion of Professional Growth Conferences.", "dueDate": "October 14", "contact": "School Superintendent" },
+                    { "id": "October-School Superintendent-2", "task": "Submit Principals' Month End Report.", "dueDate": "October 31", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "October-School Superintendent-3", "task": "Begin planning for student reporting in November.", "dueDate": "October", "contact": "School Superintendent" },
+                    { "id": "October-School Superintendent-4", "task": "SCC Submit Engagement and Alignment Plan.", "dueDate": "October", "contact": "Sheri Gallaugher and Kim Fick" }
+                ],
+                 "Curriculum/Instruction/Assessment": [
+                    { "id": "October-Curriculum/Instruction/Assessment-0", "task": "Complete benchmark assessments and begin creation of Personalized Goals.", "dueDate": "October", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Human Resources": [
+                    { "id": "October-Human Resources-0", "task": "Accreditation Application or Renewal due at the Ministry for Semester 1.", "dueDate": "Prior to October 21st", "contact": "Lauren Johb, Human Resources Manager" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "October-Facilities/IT/Transportation-0", "task": "East Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "October 15", "contact": "Facilities Department" },
+                    { "id": "October-Facilities/IT/Transportation-1", "task": "Review Billet list for school bus students.", "dueDate": "October", "contact": "Ryan Smith, Superintendent of Business" }
+                ]
+            },
+            "November": {
+                "Division Office": [
+                    { "id": "November-Division Office-0", "task": "OurSCHOOL Survey Opens.", "dueDate": "November 1", "contact": "Chris Oscar, School Superintendent" },
+                    { "id": "November-Division Office-1", "task": "OurSCHOOL Survey Closes.", "dueDate": "November 29", "contact": "Chris Oscar, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "November-Business-0", "task": "Budget Information for current school year sent back to Jamie Cowell.", "dueDate": "November 6", "contact": "Jamie Cowell, Business Manager" }
+                ],
+                "Student Support Services": [
+                    { "id": "November-Student Support Services-0", "task": "Kindergarten Phonological Awareness Screen.", "dueDate": "Beginning of November", "contact": "Meaghan Friedrick" },
+                    { "id": "November-Student Support Services-1", "task": "Early Years Evaluation (EYE) Data Entry Closing Date.", "dueDate": "November 22", "contact": "Chris Oscar, Superintendent of Schools" },
+                    { "id": "November-Student Support Services-2", "task": "Ensure Inclusion & Intervention Plan (IIP) Progress Reports are included with report cards.", "dueDate": "November", "contact": "Meaghan Friedrick" },
+                    { "id": "November-Student Support Services-3", "task": "Ensure IIPs are being created for Pre-K students in the yellow/red zone of EYE.", "dueDate": "November", "contact": "Student Support Consultants" }
+                ],
+                "School Superintendent": [
+                    { "id": "November-School Superintendent-0", "task": "Submit Principals' Month End Report.", "dueDate": "November 30", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "November-School Superintendent-1", "task": "Finalize report card plans and student-led conference/interview schedule.", "dueDate": "November", "contact": "School Superintendent" }
+                ],
+                "Facilities/IT/Transportation": [
+                     { "id": "November-Facilities/IT/Transportation-0", "task": "West Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "November 15", "contact": "Facilities Department" }
+                ]
+            },
+             "December": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "December-Education Plan/School Learning Improvement Plan-0", "task": "School Learning Improvement Action Plan Reflection (November PD).", "dueDate": "December 20", "contact": "School Superintendent" }
+                ],
+                "School Level": [
+                    { "id": "December-School Level-0", "task": "SHSAA Basketball Eligibility Form Completed.", "dueDate": "December 6, 2023", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "December-School Level-1", "task": "SHSAA Officials Registry Winter Sports Completed.", "dueDate": "December 9, 2023", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Division Office": [
+                    { "id": "December-Division Office-0", "task": "Review results of OurSCHOOL Survey.", "dueDate": "December", "contact": "Chris Oscar, School Superintendent" },
+                    { "id": "December-Division Office-1", "task": "Submit requests for accommodations for departmental examinations.", "dueDate": "December", "contact": "Ministry of Education" }
+                ],
+                "Student Support Services": [
+                    { "id": "December-Student Support Services-0", "task": "Inclusion & Intervention Plan (IIP) Submission.", "dueDate": "December 7", "contact": "Meaghan Friedrick" },
+                    { "id": "December-Student Support Services-1", "task": "Collaborate with teachers of Grade 9 students being considered for modified courses.", "dueDate": "December", "contact": "Meaghan Friedrick" },
+                    { "id": "December-Student Support Services-2", "task": "Check courses for Modified, Alternative Ed, and FIP students for second semester.", "dueDate": "December", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "December-School Superintendent-0", "task": "Submit Principals' Month End Report.", "dueDate": "December 31", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "December-School Superintendent-1", "task": "Begin staff planning and preparation for the next school year.", "dueDate": "December", "contact": "School Superintendent" }
+                ],
+                 "Curriculum/Instruction/Assessment": [
+                    { "id": "December-Curriculum/Instruction/Assessment-0", "task": "Monitor and update Personalized Goals.", "dueDate": "December", "contact": "Kim Price, Superintendent of Learning" }
+                ]
+            },
+            "January": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "January-Education Plan/School Learning Improvement Plan-0", "task": "Review Form 110-2a School Learning Improvement Plan and progress.", "dueDate": "January", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "School Level": [
+                    { "id": "January-School Level-0", "task": "SHSAA Wrestling and Curling Eligibility Form Completed.", "dueDate": "January 10, 2024", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "January-School Level-1", "task": "Submit PAA monies collected for credit.", "dueDate": "January", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Division Office": [
+                    { "id": "January-Division Office-0", "task": "Enrollments Updates and Projections.", "dueDate": "January 31", "contact": "Sheri Gallaugher" }
+                ],
+                "Business": [
+                    { "id": "January-Business-0", "task": "Review decentralized school budget spending.", "dueDate": "January", "contact": "Jamie Cowell, Business Manager" }
+                ],
+                "Student Support Services": [
+                    { "id": "January-Student Support Services-0", "task": "Ensure proper procedures are followed if student retention/placement is considered.", "dueDate": "January", "contact": "Meaghan Friedrick" },
+                    { "id": "January-Student Support Services-1", "task": "Review Grade 9 students for Modified/Alternative/FIP programs.", "dueDate": "January", "contact": "Meaghan Friedrick" },
+                    { "id": "January-Student Support Services-2", "task": "Reminder: Transition planning for students requiring support.", "dueDate": "January", "contact": "Meaghan Friedrick" },
+                    { "id": "January-Student Support Services-3", "task": "Check Schedules for Students with Semester 2 changes for specific courses (FIP, MOD, ALT).", "dueDate": "January", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "January-School Superintendent-0", "task": "Submit Principals' Month End Report.", "dueDate": "January 31", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "January-School Superintendent-1", "task": "Discuss staff planning with School Superintendent.", "dueDate": "January", "contact": "School Superintendent" },
+                    { "id": "January-School Superintendent-2", "task": "Finalize exam schedule.", "dueDate": "January", "contact": "School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "January-Curriculum/Instruction/Assessment-0", "task": "DRA or Acadiena Grade 1-5 Mid-Year Results.", "dueDate": "January 30", "contact": "Kim Price, Arlene Low, Vanessa Lewis" },
+                    { "id": "January-Curriculum/Instruction/Assessment-1", "task": "Grade 1-5 teachers submit mid-year DRA scores.", "dueDate": "January", "contact": "Blain Hilbig/Kim Price" },
+                    { "id": "January-Curriculum/Instruction/Assessment-2", "task": "Monitor and update Personalized Goals.", "dueDate": "January", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "January-Curriculum/Instruction/Assessment-3", "task": "Submit completed Student Special Project, Volunteerism, and/or Apprenticeship Credit Documentation.", "dueDate": "January", "contact": "Kim Price/Venessa Lewis" }
+                ],
+                "Human Resources": [
+                    { "id": "January-Human Resources-0", "task": "Performance Review - CUPE Staff Hired at Beginning of School Year.", "dueDate": "January 17", "contact": "Janine Walker, Human Resources Officer" },
+                    { "id": "January-Human Resources-1", "task": "Submit master Noon Hour Supervision Schedule if changes have been made.", "dueDate": "January 31", "contact": "Donna Adair, Employee Benefits Officer" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "January-Facilities/IT/Transportation-0", "task": "East Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "January 15", "contact": "Facilities Department" },
+                    { "id": "January-Facilities/IT/Transportation-1", "task": "Submit changes to five-year facilities plan.", "dueDate": "January 31", "contact": "Facilities Department" },
+                    { "id": "January-Facilities/IT/Transportation-2", "task": "Educational Trips - Request for transportation (one week prior).", "dueDate": "Ongoing", "contact": "Transportation Department" },
+                    { "id": "January-Facilities/IT/Transportation-3", "task": "Meet with school caretaker(s) and complete walkthrough.", "dueDate": "January", "contact": "Facilities Department" }
+                ]
+            },
+            "February": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "February-Education Plan/School Learning Improvement Plan-0", "task": "School Learning Improvement Action Plan Reflection (for Jan 31 PD).", "dueDate": "February 28", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Division Office": [
+                    { "id": "February-Division Office-0", "task": "Review Grade 10-12 marks on Ministry SDS.", "dueDate": "February", "contact": "Sondra Potratz or Sheri Gallaugher" }
+                ],
+                "Business": [
+                    { "id": "February-Business-0", "task": "Review Fundraising Activities with SCC.", "dueDate": "February 28", "contact": "Ryan Smith/Rhonda Saathoff" }
+                ],
+                "Student Support Services": [
+                    { "id": "February-Student Support Services-0", "task": "Plan for Kindergarten registration and orientation.", "dueDate": "February", "contact": "Chris Oscar, School Superintendent" }
+                ],
+                "School Superintendent": [
+                    { "id": "February-School Superintendent-0", "task": "Start the Teacher Professional Growth Mid-Year Reflection.", "dueDate": "February 1", "contact": "School Superintendent" },
+                    { "id": "February-School Superintendent-1", "task": "Submit Principals' Month End Report.", "dueDate": "February 28", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "February-School Superintendent-2", "task": "Plan for SCC AGM to be held in April.", "dueDate": "February", "contact": "Kim Fick, Superintendent of Schools" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "February-Curriculum/Instruction/Assessment-0", "task": "Review of Failing Marks from Semester 1 and Initiate Credit Recovery.", "dueDate": "February 4", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                 "Facilities/IT/Transportation": [
+                     { "id": "February-Facilities/IT/Transportation-0", "task": "West Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "February 10", "contact": "Facilities Department" }
+                 ]
+            },
+             "March": {
+                "School Level": [
+                    { "id": "March-School Level-0", "task": "Review IIPs and plan for student placement/support needs for next year.", "dueDate": "March", "contact": "School Student Support Services Consultant" }
+                ],
+                "Division Office": [
+                    { "id": "March-Division Office-0", "task": "Deadline 2nd Semester course registration MySchoolSask.", "dueDate": "March 26, 2024", "contact": "Sondra Potratz" }
+                ],
+                "Student Support Services": [
+                    { "id": "March-Student Support Services-0", "task": "Reminder: Transition planning for students requiring support.", "dueDate": "March", "contact": "Meaghan Friedrick" },
+                    { "id": "March-Student Support Services-1", "task": "Complete Form 210-23 and meet with Student Support Consultant.", "dueDate": "March", "contact": "Student Support Consultants" }
+                ],
+                "School Superintendent": [
+                    { "id": "March-School Superintendent-0", "task": "Submit Principals' Month End Report.", "dueDate": "March 31", "contact": "Email Andrea Dows and cc School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "March-Curriculum/Instruction/Assessment-0", "task": "Finalize report card plans and three-way conferences/interview schedule.", "dueDate": "March (Alternating Years)", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "March-Curriculum/Instruction/Assessment-1", "task": "Monitor and Update Personalized Goals.", "dueDate": "March", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Human Resources": [
+                    { "id": "March-Human Resources-0", "task": "Accreditation Application or Renewal due at the Ministry.", "dueDate": "Prior to March 20", "contact": "Lauren Johb, Human Resources Manager" },
+                    { "id": "March-Human Resources-1", "task": "Review Performance & Growth Documents in Frontline.", "dueDate": "Prior to March 20", "contact": "Lauren Johb, Human Resources Manager" }
+                ]
+            },
+            "April": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "April-Education Plan/School Learning Improvement Plan-0", "task": "School Learning Improvement Action Plan Reflection (for March PD).", "dueDate": "April 22, 2024", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "School Level": [
+                    { "id": "April-School Level-0", "task": "SHSAA Badminton Eligibility Form.", "dueDate": "April 1, 2024", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "April-School Level-1", "task": "SHSAA Officials Registry - Spring Sports.", "dueDate": "April 21, 2024", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "April-School Level-2", "task": "Continue to fine tune staffing assignments for next year.", "dueDate": "April", "contact": "School Superintendent" }
+                ],
+                "Student Support Services": [
+                    { "id": "April-Student Support Services-0", "task": "Early Years Evaluation (EYE) - Retesting.", "dueDate": "April 14, 2024 (Completion May 16)", "contact": "Chris Oscar, School Superintendent" }
+                ],
+                "School Superintendent": [
+                    { "id": "April-School Superintendent-0", "task": "Submit Principals' Month End Report.", "dueDate": "April 30", "contact": "Email Andrea Dows and cc School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "April-Curriculum/Instruction/Assessment-0", "task": "Monitor and Update Personalized Goals.", "dueDate": "April", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "April-Curriculum/Instruction/Assessment-1", "task": "Begin Building School Program for upcoming year.", "dueDate": "April", "contact": "Operational Superintendent" }
+                ],
+                "Human Resources": [
+                    { "id": "April-Human Resources-0", "task": "Retirement Gifts and Years of Service Pins sent to schools.", "dueDate": "April", "contact": "Janine Walker, Human Resources Officer" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "April-Facilities/IT/Transportation-0", "task": "East Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "April 15", "contact": "Facilities Department" },
+                    { "id": "April-Facilities/IT/Transportation-1", "task": "Kindergarten Transportation Requests.", "dueDate": "April 30", "contact": "Transportation Department" }
+                ]
+            },
+            "May": {
+                 "Education Plan/School Learning Improvement Plan": [
+                    { "id": "May-Education Plan/School Learning Improvement Plan-0", "task": "School Learning Improvement Action Plan Reflection (for May PD).", "dueDate": "May 29", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "May-Education Plan/School Learning Improvement Plan-1", "task": "Complete Form 110-5 School Learning Improvement Plan Annual Summary.", "dueDate": "May (Due in June)", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "School Level": [
+                    { "id": "May-School Level-0", "task": "SHSAA Track and Field Eligibility Form.", "dueDate": "May 1, 2024", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "May-School Level-1", "task": "Submit SCC Contacts Information.", "dueDate": "May", "contact": "Sheri Gallaugher, Executive Assistant" },
+                    { "id": "May-School Level-2", "task": "Ensure all SCC Members Complete Digital Year End Evaluation.", "dueDate": "May", "contact": "Kim Fick School Superintendent" },
+                    { "id": "May-School Level-3", "task": "Plan with staff for necessary texts, resources, etc. for next year.", "dueDate": "May", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "May-School Level-4", "task": "Determine distance learning needs for your school.", "dueDate": "May", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "May-Business-0", "task": "Update School Fee Schedule.", "dueDate": "May 29", "contact": "Ryan Smith/Jamie Cowell" },
+                    { "id": "May-Business-1", "task": "Review SCC Constitution and submit revisions for Board approval.", "dueDate": "May", "contact": "Ryan Smith, Superintendent of Business" },
+                    { "id": "May-Business-2", "task": "Review decentralized school budget spending.", "dueDate": "May", "contact": "Jamie Cowell, Business Manager" }
+                ],
+                "Student Support Services": [
+                    { "id": "May-Student Support Services-0", "task": "Early Years Evaluation (EYE) - Retesting Closing Date.", "dueDate": "May 23, 2024", "contact": "Chris Oscar, School Superintendent" },
+                    { "id": "May-Student Support Services-1", "task": "Consult with staff and parents for students requiring Modified courses.", "dueDate": "May", "contact": "Meaghan Friedrick" },
+                    { "id": "May-Student Support Services-2", "task": "Consult with staff and parents for students requiring Alternative courses.", "dueDate": "May", "contact": "Meaghan Friedrick" },
+                    { "id": "May-Student Support Services-3", "task": "Consult with staff and parents for students requiring Functional Integrated programs.", "dueDate": "May", "contact": "Meaghan Friedrick" },
+                    { "id": "May-Student Support Services-4", "task": "Communicate Kindergarten start date.", "dueDate": "May", "contact": "Chris Oscar, School Superintendent" },
+                    { "id": "May-Student Support Services-5", "task": "Phonological Awareness Screening for Kindergarten and Grade 1.", "dueDate": "May", "contact": "Meaghan Friedrick" },
+                    { "id": "May-Student Support Services-6", "task": "Support transition meetings and review Student Support Services caseload.", "dueDate": "May", "contact": "School Student Support Services Consultant" },
+                    { "id": "May-Student Support Services-7", "task": "Meet with staff to determine role of CCT for upcoming year.", "dueDate": "May", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "May-School Superintendent-0", "task": "Start Year End Professional Discussions with Staff.", "dueDate": "May 15", "contact": "School Superintendent" },
+                    { "id": "May-School Superintendent-1", "task": "Submit Principals' Month End Report.", "dueDate": "May 31", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "May-School Superintendent-2", "task": "Complete formal teacher supervisions for 1st/2nd year teachers.", "dueDate": "May", "contact": "School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "May-Curriculum/Instruction/Assessment-0", "task": "Finalize Personalized Goals in Edsby.", "dueDate": "May", "contact": "Kim Price, Superintendent of Learning" },
+                    { "id": "May-Curriculum/Instruction/Assessment-1", "task": "Grades 1-5 Teachers Conduct Acadience Assesements.", "dueDate": "May", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "Human Resources": [
+                    { "id": "May-Human Resources-0", "task": "Submit Noon Hour Supervision changes.", "dueDate": "May 29", "contact": "Donna Adair" },
+                    { "id": "May-Human Resources-1", "task": "Begin planning noon supervision plan for next year.", "dueDate": "May", "contact": "Donna Adair" },
+                    { "id": "May-Human Resources-2", "task": "Collect teacher declaration for noon supervision.", "dueDate": "May", "contact": "Donna Adair" },
+                    { "id": "May-Human Resources-3", "task": "Finalize Forms in Frontline Professional Growth.", "dueDate": "May", "contact": "Lauren Johb" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "May-Facilities/IT/Transportation-0", "task": "West Side Schools Occupational Health and Safety Meeting and Minutes.", "dueDate": "May 15", "contact": "Facilities Department" }
+                ]
+            },
+            "June": {
+                "Education Plan/School Learning Improvement Plan": [
+                    { "id": "June-Education Plan/School Learning Improvement Plan-0", "task": "Finalize and input Assessment results (Acadience, Personalized Goals).", "dueDate": "June 30", "contact": "Kim Price or Vanessa Lewis" },
+                    { "id": "June-Education Plan/School Learning Improvement Plan-1", "task": "School Learning Improvement Plan Annual Summary signed by SCC Chair and submitted.", "dueDate": "June 30", "contact": "Kim Price, Superintendent of Learning" }
+                ],
+                "School Level": [
+                    { "id": "June-School Level-0", "task": "Complete Distance Learning Registration for Grade 10-12.", "dueDate": "June", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "June-School Level-1", "task": "Order staff nameplates for new staff members.", "dueDate": "June", "contact": "Completed at school level" },
+                    { "id": "June-School Level-2", "task": "Submit requests for cooperative or coed SHSAA teams.", "dueDate": "June", "contact": "Blain Hilbig, School Superintendent" },
+                    { "id": "June-School Level-3", "task": "Submit Practical and Applied Arts monies collected.", "dueDate": "June", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Division Office": [
+                    { "id": "June-Division Office-0", "task": "Review Grade 10-12 marks on Ministry SDS.", "dueDate": "Prior to July 3", "contact": "Sondra Potratz or Sheri Gallaugher" },
+                    { "id": "June-Division Office-1", "task": "Complete end of year process MySchoolSask (MSS).", "dueDate": "Before June 30", "contact": "Sondra Potratz" },
+                    { "id": "June-Division Office-2", "task": "Enter Driver Education marks into MySchoolSask/Edsby.", "dueDate": "June", "contact": "Blain Hilbig, School Superintendent" }
+                ],
+                "Business": [
+                    { "id": "June-Business-0", "task": "Review decentralized school budget.", "dueDate": "June", "contact": "Jamie Cowell, Business Manager" },
+                    { "id": "June-Business-1", "task": "Petty cash statement submitted at end of June.", "dueDate": "June", "contact": "Jamie Cowell, Business Manager" }
+                ],
+                "Student Support Services": [
+                    { "id": "June-Student Support Services-0", "task": "Review Inclusion & Intervention Plans (IIPs) prior to submission.", "dueDate": "June 15", "contact": "Meaghan Friedrick" },
+                    { "id": "June-Student Support Services-1", "task": "Deadline for entering English as an Additional Language (EAL) CFR numbers.", "dueDate": "June 12", "contact": "Meaghan Friedrick" },
+                    { "id": "June-Student Support Services-2", "task": "Support the exchange of information with receiving teachers (IIPs, etc.).", "dueDate": "June", "contact": "Meaghan Friedrick" },
+                    { "id": "June-Student Support Services-3", "task": "Review educational assistant assignments for next year.", "dueDate": "June", "contact": "Meaghan Friedrick" },
+                    { "id": "June-Student Support Services-4", "task": "Ensure contents of cumulative records are updated.", "dueDate": "June", "contact": "Meaghan Friedrick" }
+                ],
+                "School Superintendent": [
+                    { "id": "June-School Superintendent-0", "task": "Submit School Program Plan.", "dueDate": "June 15", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-1", "task": "Submit school bell times for upcoming year.", "dueDate": "June 12", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-2", "task": "Wrap up Year End Professional Discussions with Staff.", "dueDate": "June 12", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-3", "task": "Submit School Timetable and Teacher Timetables.", "dueDate": "June 15", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-4", "task": "Finalize and submit Noon Supervision Plan for next school year.", "dueDate": "June 15", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-5", "task": "Submit Principals' Month End Report.", "dueDate": "June 30", "contact": "Email Andrea Dows and cc School Superintendent" },
+                    { "id": "June-School Superintendent-6", "task": "Ensure school level year-end checklist items are completed.", "dueDate": "June", "contact": "School Superintendent" },
+                    { "id": "June-School Superintendent-7", "task": "SCC Submit Engagement and Alignment Plan with 'Year-End Reflection'.", "dueDate": "June", "contact": "Email Sheri Gallaugher, Executive Assistant; CC Kim Fick Superintdent of Schools" },
+                    { "id": "June-School Superintendent-8", "task": "Present School Learning Improvement Plan Annual Summary to SCC and community at large. Submit copy to School Superintendent.", "dueDate": "June", "contact": "School Superintendent" }
+                ],
+                "Curriculum/Instruction/Assessment": [
+                    { "id": "June-Curriculum/Instruction/Assessment-0", "task": "Finalize and input Assessment results into Dossier.", "dueDate": "June", "contact": "Kim Price or Vanessa Lewis" },
+                    { "id": "June-Curriculum/Instruction/Assessment-1", "task": "Submit completed Student Special Project, Volunteerism and/or Apprenticeship Credit Documentation.", "dueDate": "June", "contact": "Kim Price/Venessa Lewis" }
+                ],
+                "Human Resources": [
+                    { "id": "June-Human Resources-0", "task": "Submit Noon Supervision Plan for upcoming year.", "dueDate": "June 12", "contact": "Donna Adair" },
+                    { "id": "June-Human Resources-1", "task": "Noon Hour Supervision Final Update for Current Year.", "dueDate": "June 12", "contact": "Donna Adair" },
+                    { "id": "June-Human Resources-2", "task": "Ensure all teachers (including substitutes) are registered with SPTRB.", "dueDate": "June 30", "contact": "Lauren Johb or Janine Walker" },
+                    { "id": "June-Human Resources-3", "task": "Finalize Forms in Frontline Professional Growth.", "dueDate": "June", "contact": "Lauren Johb" },
+                    { "id": "June-Human Resources-4", "task": "Collect Keys, Laptops and other devices from departing staff.", "dueDate": "June", "contact": "Lauren Johb" }
+                ],
+                "Facilities/IT/Transportation": [
+                    { "id": "June-Facilities/IT/Transportation-0", "task": "Confidential Shredding and Archive Materials pickup request.", "dueDate": "June 5", "contact": "Facilities Department" },
+                    { "id": "June-Facilities/IT/Transportation-1", "task": "Meet with school caretaker(s) for final walkthrough.", "dueDate": "June", "contact": "Facilities Department" },
+                    { "id": "June-Facilities/IT/Transportation-2", "task": "Ensure 'No Tobacco Allowed' signage is in place.", "dueDate": "June", "contact": "Facilities Department" },
+                    { "id": "June-Facilities/IT/Transportation-3", "task": "Discuss summer cleaning schedule with caretakers.", "dueDate": "June", "contact": "Michael Zummack" },
+                    { "id": "June-Facilities/IT/Transportation-4", "task": "Submit completed Transportation Request Educational Trips.", "dueDate": "June 29", "contact": "Transportation Department" },
+                    { "id": "June-Facilities/IT/Transportation-5", "task": "Submit Parent transportation and attendance reports.", "dueDate": "June 29", "contact": "Transportation Department" }
+                ]
+            }
+        };
+
+        const categoryColors = {
+            "Education Plan/School Learning Improvement Plan": "bg-purple-100 border-purple-500",
+            "School Level": "bg-blue-100 border-blue-500",
+            "Division Office": "bg-green-100 border-green-500",
+            "Business": "bg-yellow-100 border-yellow-500",
+            "Student Support Services": "bg-red-100 border-red-500",
+            "School Superintendent": "bg-indigo-100 border-indigo-500",
+            "Curriculum/Instruction/Assessment": "bg-pink-100 border-pink-500",
+            "Human Resources": "bg-teal-100 border-teal-500",
+            "Facilities/IT/Transportation": "bg-gray-100 border-gray-500",
+        };
+
+        const categoryTextColors = {
+            "Education Plan/School Learning Improvement Plan": "text-purple-800",
+            "School Level": "text-blue-800",
+            "Division Office": "text-green-800",
+            "Business": "text-yellow-800",
+            "Student Support Services": "text-red-800",
+            "School Superintendent": "text-indigo-800",
+            "Curriculum/Instruction/Assessment": "text-pink-800",
+            "Human Resources": "text-teal-800",
+            "Facilities/IT/Transportation": "text-gray-800",
+        };
+        
+        const categoryFilterBg = {
+            "Education Plan/School Learning Improvement Plan": "bg-purple-500",
+            "School Level": "bg-blue-500",
+            "Division Office": "bg-green-500",
+            "Business": "bg-yellow-500",
+            "Student Support Services": "bg-red-500",
+            "School Superintendent": "bg-indigo-500",
+            "Curriculum/Instruction/Assessment": "bg-pink-500",
+            "Human Resources": "bg-teal-500",
+            "Facilities/IT/Transportation": "bg-gray-500",
+        };
+
+
+        let activeFilters = [];
+        let currentSearchTerm = "";
+        let completedTasks = {};
+
+        const monthNavigation = document.getElementById('month-navigation');
+        const calendarContent = document.getElementById('calendar-content');
+        const categoryFilters = document.getElementById('category-filters');
+        const searchInput = document.getElementById('search-input');
+        const noResultsDiv = document.getElementById('no-results');
+        
+        function loadCompletedTasks() {
+            completedTasks = JSON.parse(localStorage.getItem('completedAdminTasks')) || {};
+        }
+
+        function saveCompletedTasks() {
+            localStorage.setItem('completedAdminTasks', JSON.stringify(completedTasks));
+        }
+
+
+        function renderCalendar() {
+            calendarContent.innerHTML = '';
+            let hasVisibleTasks = false;
+
+            Object.keys(calendarData).forEach(month => {
+                const monthSection = document.createElement('section');
+                monthSection.id = month;
+                monthSection.className = 'mb-12 scroll-mt-24';
+
+                const monthHeader = document.createElement('h2');
+                monthHeader.className = 'text-3xl font-bold text-gray-700 mb-6 border-b-2 border-indigo-200 pb-2';
+                monthHeader.textContent = month;
+                monthSection.appendChild(monthHeader);
+
+                const grid = document.createElement('div');
+                grid.className = 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6';
+                
+                let monthHasTasks = false;
+
+                Object.keys(calendarData[month]).forEach(category => {
+                    if (activeFilters.length > 0 && !activeFilters.includes(category)) {
+                        return;
+                    }
+
+                    const tasks = calendarData[month][category];
+                    tasks.forEach(task => {
+                        const taskText = `${task.task} ${task.dueDate} ${task.contact || ''}`.toLowerCase();
+                        if (currentSearchTerm && !taskText.includes(currentSearchTerm)) {
+                            return;
+                        }
+                        
+                        monthHasTasks = true;
+                        hasVisibleTasks = true;
+
+                        const card = document.createElement('div');
+                        card.className = `task-card ${categoryColors[category]} rounded-lg p-4 border-l-4 shadow-sm flex flex-col`;
+                        card.dataset.category = category;
+
+                        const isCompleted = completedTasks[task.id];
+                        if (isCompleted) {
+                            card.classList.add('completed');
+                        }
+
+                        card.innerHTML = `
+                            <div class="flex-grow">
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-xs font-semibold uppercase ${categoryTextColors[category]}">${category}</span>
+                                    <input type="checkbox" class="task-checkbox" data-task-id="${task.id}" ${isCompleted ? 'checked' : ''}>
+                                </div>
+                                <p class="text-gray-800 font-medium my-2 task-text">${task.task}</p>
+                            </div>
+                            <div class="mt-auto pt-2 border-t border-gray-200/50">
+                                <div class="flex items-center text-sm text-gray-600">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                    <strong>Due:</strong>&nbsp;${task.dueDate}
+                                </div>
+                                ${task.contact ? `
+                                <div class="flex items-center text-sm text-gray-600 mt-1">
+                                    <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                    <strong>Contact:</strong>&nbsp;${task.contact}
+                                </div>` : ''}
+                            </div>
+                        `;
+                        grid.appendChild(card);
+                    });
+                });
+                if(monthHasTasks){
+                    monthSection.appendChild(grid);
+                    calendarContent.appendChild(monthSection);
+                }
+            });
+            
+            noResultsDiv.classList.toggle('hidden', hasVisibleTasks);
+        }
+
+        function setupNavigation() {
+            Object.keys(calendarData).forEach(month => {
+                const button = document.createElement('button');
+                button.textContent = month;
+                button.className = 'month-nav-button px-4 py-2 text-sm font-medium rounded-full hover:bg-indigo-500 hover:text-white transition';
+                button.onclick = () => {
+                    document.getElementById(month)?.scrollIntoView({ behavior: 'smooth' });
+                    updateActiveMonth();
+                };
+                monthNavigation.appendChild(button);
+            });
+        }
+        
+        function updateActiveMonth() {
+            const buttons = document.querySelectorAll('.month-nav-button');
+            let currentMonth = '';
+
+            for (const month of Object.keys(calendarData)) {
+                const section = document.getElementById(month);
+                if (section) {
+                    const rect = section.getBoundingClientRect();
+                    if (rect.top < window.innerHeight / 2 && rect.bottom > window.innerHeight / 2) {
+                        currentMonth = month;
+                        break;
+                    }
+                }
+            }
+             if (!currentMonth && window.scrollY < 200) {
+                currentMonth = Object.keys(calendarData)[0];
+            }
+
+            buttons.forEach(btn => {
+                btn.classList.toggle('active', btn.textContent === currentMonth);
+            });
+        }
+
+        function setupFilters() {
+            Object.keys(categoryColors).forEach(category => {
+                const button = document.createElement('button');
+                button.textContent = category;
+                button.className = `filter-button ${categoryFilterBg[category]} text-white px-3 py-1 text-xs font-semibold rounded-full shadow-md transform hover:scale-105 transition`;
+                button.onclick = () => {
+                    const index = activeFilters.indexOf(category);
+                    if (index > -1) {
+                        activeFilters.splice(index, 1);
+                    } else {
+                        activeFilters.push(category);
+                    }
+                    button.classList.toggle('active', index === -1);
+                    renderCalendar();
+                };
+                categoryFilters.appendChild(button);
+            });
+        }
+        
+        searchInput.addEventListener('input', (e) => {
+            currentSearchTerm = e.target.value.toLowerCase();
+            renderCalendar();
+        });
+
+        calendarContent.addEventListener('change', (e) => {
+            if (e.target.classList.contains('task-checkbox')) {
+                const taskId = e.target.dataset.taskId;
+                const card = e.target.closest('.task-card');
+                if (e.target.checked) {
+                    card.classList.add('completed');
+                    completedTasks[taskId] = true;
+                } else {
+                    card.classList.remove('completed');
+                    delete completedTasks[taskId];
+                }
+                saveCompletedTasks();
+            }
+        });
+
+
+        // Initial render
+        loadCompletedTasks();
+        setupNavigation();
+        setupFilters();
+        renderCalendar();
+        
+        // Active month on scroll
+        window.addEventListener('scroll', updateActiveMonth);
+        // Set initial active month
+        setTimeout(updateActiveMonth, 100);
+
+    </script>
+</body>
+</html>
+
